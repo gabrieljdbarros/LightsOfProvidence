@@ -5,12 +5,13 @@ using UnityEngine.UI;
 [RequireComponent(typeof(CharacterController))]
 
 
+
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float walkSpeed = 3f;
     public float crouchSpeed = 2f;
-    public float sprintSpeed = 5f; 
+    public float sprintSpeed = 5f;
     public float gravity = -9.81f;
 
     [Header("Controller Heights")]
@@ -30,26 +31,27 @@ public class PlayerController : MonoBehaviour
     [Header("Stamina")]
     public float maxStamina = 100f;
     public float minStaminaToStartSprint = 10f;
-    public float drainSprintPerSec = 20f;     
-    public float regenIdlePerSec = 25f;     
-    public float regenWalkPerSec = 15f;       
-    public float regenCrouchPerSec = 30f;     
+    public float drainSprintPerSec = 20f;
+    public float regenIdlePerSec = 25f;
+    public float regenWalkPerSec = 15f;
+    public float regenCrouchPerSec = 30f;
     public Slider staminaBar;
 
     [Header("Noise")]
     [Range(0f, 1f)] public float noiseWalk = 0.6f;
     [Range(0f, 1f)] public float noiseCrouch = 0.2f;
     [Range(0f, 1f)] public float noiseSprint = 1.0f;
-    public float maxNoiseRadius = 12f;       
+    public float maxNoiseRadius = 12f;
 
 
     public float CurrentNoise { get; private set; }
     public float NoiseRadius => CurrentNoise * maxNoiseRadius;
 
     // Internos
+    [SerializeField] private InputActionReference sprintAction;
     private CharacterController cc;
-    private Vector2 moveInput;  
-    private Vector2 lookInput;      
+    private Vector2 moveInput;
+    private Vector2 lookInput;
     private Vector3 velocity;
     private float pitch;
     private bool isCrouched;
@@ -57,6 +59,8 @@ public class PlayerController : MonoBehaviour
     private float stamina;
     private PlayerInput pi;
 
+    void OnEnable()  { if (sprintAction) sprintAction.action.Enable(); }
+    void OnDisable() { if (sprintAction) sprintAction.action.Disable(); }
     void Start()
     {
 
@@ -118,23 +122,24 @@ public class PlayerController : MonoBehaviour
         //Velocidade atual
         bool hasMoveInput = moveInput.sqrMagnitude > 0.0001f;
 
-    
-        bool sprintHeld = false;
-        if (pi != null)
-{
-            var sprintAction = pi.actions["Sprint"];
-        if (sprintAction != null)
-        sprintHeld = sprintAction.IsPressed();
-}
+        // Sprint via InputActionReference (arraste no Inspector)
+        bool sprintHeld = sprintAction && sprintAction.action.IsPressed();
 
-// Só pode sprintar se tiver stamina suficiente
+        // Só pode sprintar se tiver stamina suficiente
         bool canStartSprint = stamina >= minStaminaToStartSprint;
 
-        if (isCrouched) isSprinting = false; 
-        else isSprinting = sprintHeld && (isSprinting || canStartSprint);
-        if (isSprinting && stamina <= 0.01f) isSprinting = false;
+        // Regras de sprint
+        if (isCrouched) 
+        isSprinting = false;
+        else 
+        isSprinting = sprintHeld && (isSprinting || canStartSprint);
 
+        if (isSprinting && stamina <= 0.01f) 
+        isSprinting = false;
+
+        // Define velocidade atual
         float currentSpeed = isCrouched ? crouchSpeed : (isSprinting ? sprintSpeed : walkSpeed);
+
 
         //  Movimento no plano
         Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y;
@@ -177,12 +182,13 @@ public class PlayerController : MonoBehaviour
         stamina = Mathf.Clamp(stamina + delta, 0f, maxStamina);
         UpdateStaminaUI();
 
-        //  Noise (para IA - NÃO IMPLEMENTADO AINDA) 
+        //  Noise (para os inimigos - NÃO IMPLEMENTADO AINDA / ainda precisamos colocar o input do mic) 
         if (!hasMoveInput) CurrentNoise = 0f;
         else if (isCrouched) CurrentNoise = noiseCrouch;
         else if (isSprinting) CurrentNoise = noiseSprint;
         else CurrentNoise = noiseWalk;
-        
+    if (Time.frameCount % 20 == 0) Debug.Log($"stam:{stamina:0.0}");
+
     }
 
     private void UpdateStaminaUI()
@@ -193,4 +199,5 @@ public class PlayerController : MonoBehaviour
             staminaBar.value = stamina;
         }
     }
+    
 }
